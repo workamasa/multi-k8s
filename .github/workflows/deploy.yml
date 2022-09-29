@@ -1,0 +1,59 @@
+name: Deploy Frontend
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    # - run: docker login -u ${{secrets.DOCKER_USERNAME}} - p ${{secrets.DOCKER_PASSWORD}}
+
+
+    - run: docker build -t amasaabu/react-test -f ./client/Dockerfile.dev ./client
+    - run: docker run -e CI=true amasaabu/react-test npm test
+    
+    - name: build for production-client
+      run: docker build -t amasaabubakar/multi-client ./client
+
+    - name: build for production-nginx
+      run: docker build -t amasaabubakar/multi-nginx ./nginx
+
+    - name: build for production-server
+      run: docker build -t amasaabubakar/multi-server ./server
+
+    - name: build for production-worker
+      run: docker build -t amasaabubakar/multi-worker ./worker
+      
+    
+
+    - name: Login to dockerhub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_ID }}" --password-stdin
+
+    - name: push to docker hub client
+      run: docker push amasaabubakar/multi-client
+
+    - name: push to docker hub nginx
+      run: docker push amasaabubakar/multi-nginx
+
+    - name: push to docker hub server
+      run: docker push amasaabubakar/multi-server
+
+    - name: push to docker hub worker
+      run: docker push amasaabubakar/multi-worker
+
+    - name: Generate deploymentt package
+      run: zip -r deploy.zip . -x '*.git'
+
+    - name: Deploy to EB
+      uses: einaregilsson/beanstalk-deploy@v18
+      with:
+        aws_access_key: ${{secrets.AWS_ACCESS_KEY}}
+        aws_secret_key: ${{secrets.AWS_SECRETE_ACCESS_KEY}}
+        application_name: multi-docker
+        environment_name: Multidocker-env-2
+        existing_bucket_name: elasticbeanstalk-us-east-1-451613728407
+        region: us-east-1
+        version_label: ${{ github.sha }}
+        deployment_package: deploy.zip
