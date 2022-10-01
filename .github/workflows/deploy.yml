@@ -39,12 +39,12 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-2
+      run: aws eks --region us-east-1 update-kubeconfig --name multi-cluster
 
 
     
     - name: Apply
       run: |-
-          aws eks --region us-east-1 update-kubeconfig --name multi-cluster
           kubectl apply -f k8s
           kubectl set image deployments/server-deployment server=cygnetops/multi-server-k8s-pgfix-gh:${{ env.SHA }}
           kubectl set image deployments/client-deployment client=cygnetops/multi-client-k8s-gh:${{ env.SHA }}
